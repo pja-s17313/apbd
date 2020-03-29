@@ -1,5 +1,6 @@
 using System;
 using Microsoft.AspNetCore.Mvc;
+using pjatk_apbd.DAL;
 using pjatk_apbd.Models;
 
 namespace pjatk_apbd.Controllers
@@ -9,10 +10,17 @@ namespace pjatk_apbd.Controllers
 
   public class StudentsController : ControllerBase
   {
-    [HttpGet]
-    public string GetStudents(string orderBy)
+    private readonly IDbService _dbService;
+
+    public StudentsController(IDbService dbService)
     {
-      return $"Kowalski, Malejwski, Andrzejewski sortowanie={orderBy}";
+      _dbService = dbService;
+    }
+
+    [HttpGet]
+    public IActionResult GetStudents(string orderBy)
+    {
+      return Ok(_dbService.GetStudents());
     }
 
     [HttpGet("{id}")]
