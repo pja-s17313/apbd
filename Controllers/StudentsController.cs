@@ -53,9 +53,8 @@ namespace pjatk_apbd.Controllers
       using (var command = new SqlCommand())
       {
         command.Connection = client;
-        // PRONE TO SQL INJECTION
-        // https://localhost:5001/api/students/2; DROP TABLE Student;
-        command.CommandText = "SELECT s.IndexNumber, s.FirstName, s.LastName, e.Semester, st.Name FROM Student s LEFT JOIN Enrollment e ON s.IdEnrollment = e.IdEnrollment LEFT JOIN Studies st ON e.IdStudy = st.IdStudy WHERE s.IndexNumber = " + indexNumber;
+        command.CommandText = "SELECT s.IndexNumber, s.FirstName, s.LastName, e.Semester, st.Name FROM Student s LEFT JOIN Enrollment e ON s.IdEnrollment = e.IdEnrollment LEFT JOIN Studies st ON e.IdStudy = st.IdStudy WHERE s.IndexNumber = @indexNumber";
+        command.Parameters.AddWithValue("indexNumber", indexNumber);
 
         client.Open();
         var reader = command.ExecuteReader();
