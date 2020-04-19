@@ -46,16 +46,29 @@ namespace pjatk_apbd.Controllers
       return Ok(result);
     }
 
-    [HttpGet("{id}")]
-    public IActionResult GetStudent(int id)
+    [HttpGet("{indexNumber}")]
+    public IActionResult GetStudent(string indexNumber)
     {
-      if (id == 1)
+      using (var client = new SqlConnection("Server=db-mssql.pjwstk.edu.pl;Database=s17313;User Id=apbds17313;Password=admin;"))
+      using (var command = new SqlCommand())
       {
-        return Ok("Kowalski");
-      }
-      else if (id == 2)
-      {
-        return Ok("Malewski");
+        command.Connection = client;
+        command.CommandText = "SELECT s.IndexNumber, s.FirstName, s.LastName, e.Semester, st.Name FROM Student s LEFT JOIN Enrollment e ON s.IdEnrollment = e.IdEnrollment LEFT JOIN Studies st ON e.IdStudy = st.IdStudy WHERE s.IndexNumber = " + indexNumber;
+
+        client.Open();
+        var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+          var st = new Student();
+
+          st.FirstName = reader["FirstName"].ToString();
+          st.LastName = reader["LastName"].ToString();
+          st.IndexNumber = reader["IndexNumber"].ToString();
+          st.Semester = reader.GetInt32(reader.GetOrdinal("Semester"));
+          st.Course = reader["Name"].ToString();
+
+          return Ok(st);
+        }
       }
 
       return NotFound("Nie znaleziono studenta");
