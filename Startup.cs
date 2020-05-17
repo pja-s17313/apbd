@@ -41,6 +41,8 @@ namespace pjatk_apbd
 
       app.UseHttpsRedirection();
 
+      app.UseMiddleware<LoggingMiddleware>();
+
       app.Use(async (context, next) =>
       {
         var indexNumber = (string)context.Request.Headers["Index"];
