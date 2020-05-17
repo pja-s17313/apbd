@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -39,6 +40,33 @@ namespace pjatk_apbd
       }
 
       app.UseHttpsRedirection();
+
+      app.Use(async (context, next) =>
+      {
+        var indexNumber = (string)context.Request.Headers["Index"];
+        if (indexNumber == null)
+        {
+          context.Response.StatusCode = 400;
+          return;
+        }
+
+        using (var client = new SqlConnection("Server=db-mssql.pjwstk.edu.pl;Database=s17313;User Id=apbds17313;Password=admin;"))
+        using (var command = new SqlCommand())
+        {
+          command.Connection = client;
+          command.CommandText = "SELECT 1 FROM Student WHERE IndexNumber = @indexNumber";
+          command.Parameters.AddWithValue("indexNumber", indexNumber);
+
+          var result = command.ExecuteScalar();
+          if (result == null)
+          {
+            context.Response.StatusCode = 401;
+            return;
+          }
+        }
+
+        await next();
+      });
 
       app.UseRouting();
 
