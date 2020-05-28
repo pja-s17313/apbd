@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -11,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using pjatk_apbd.DAL;
 
 namespace pjatk_apbd
@@ -27,6 +30,18 @@ namespace pjatk_apbd
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
     {
+      services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+      {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+          ValidateIssuer = true,
+          ValidateAudience = true,
+          ValidateLifetime = true,
+          ValidIssuer = "APBD",
+          ValidAudience = "Students",
+          IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWTSecret"]))
+        };
+      });
       services.AddSingleton<IDbService, MockDbService>();
       services.AddControllers();
     }
@@ -41,36 +56,9 @@ namespace pjatk_apbd
 
       app.UseHttpsRedirection();
 
-      app.UseMiddleware<LoggingMiddleware>();
-
-      app.Use(async (context, next) =>
-      {
-        var indexNumber = (string)context.Request.Headers["Index"];
-        if (indexNumber == null)
-        {
-          context.Response.StatusCode = 400;
-          return;
-        }
-
-        using (var client = new SqlConnection("Server=db-mssql.pjwstk.edu.pl;Database=s17313;User Id=apbds17313;Password=admin;"))
-        using (var command = new SqlCommand())
-        {
-          command.Connection = client;
-          command.CommandText = "SELECT 1 FROM Student WHERE IndexNumber = @indexNumber";
-          command.Parameters.AddWithValue("indexNumber", indexNumber);
-
-          var result = command.ExecuteScalar();
-          if (result == null)
-          {
-            context.Response.StatusCode = 401;
-            return;
-          }
-        }
-
-        await next();
-      });
-
       app.UseRouting();
+
+      app.UseAuthentication();
 
       app.UseAuthorization();
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using pjatk_apbd.DAL;
 using pjatk_apbd.Models;
@@ -19,6 +20,7 @@ namespace pjatk_apbd.Controllers
       _dbService = dbService;
     }
 
+    [Authorize(Roles = "student")]
     [HttpPost]
     public IActionResult CreateEnrollment(Enrollment enr)
     {
