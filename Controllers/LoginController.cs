@@ -34,6 +34,7 @@ namespace pjatk_apbd.Controllers
       {
         return BadRequest("Please fill in all required fields");
       }
+      Guid refreshToken;
       using (var client = new SqlConnection("Server=db-mssql.pjwstk.edu.pl;Database=s17313;User Id=apbds17313;Password=admin;"))
       using (var command = new SqlCommand())
       {
@@ -47,6 +48,15 @@ namespace pjatk_apbd.Controllers
         {
           return BadRequest("Wrong login and/or password");
         }
+
+        refreshToken = Guid.NewGuid();
+
+        command.CommandText = "UPDATE student s SET refreshToken = @refreshToken, refreshTokenTs = @ts WHERE s.indexNumber = @login";
+        command.Parameters.AddWithValue("login", req.Login);
+        command.Parameters.AddWithValue("refreshToken", refreshToken);
+        command.Parameters.AddWithValue("ts", DateTime.Now.AddDays(1));
+        command.ExecuteNonQuery();
+
         client.Close();
       }
 
@@ -66,7 +76,65 @@ namespace pjatk_apbd.Controllers
         signingCredentials: credentials
       );
 
-      return Ok(new JwtSecurityTokenHandler().WriteToken(token));
+      return Ok(new
+      {
+        accessToken = new JwtSecurityTokenHandler().WriteToken(token),
+        refreshToken = refreshToken
+      });
+    }
+
+    [HttpPost("refresh-token/{token}")]
+    public IActionResult RefreshAccessToken(String refreshToken)
+    {
+      string indexNumber;
+      Guid newRefreshToken;
+
+      using (var client = new SqlConnection("Server=db-mssql.pjwstk.edu.pl;Database=s17313;User Id=apbds17313;Password=admin;"))
+      using (var command = new SqlCommand())
+      {
+        client.Open();
+        command.Connection = client;
+        command.CommandText = "SELECT indexNumber FROM student s WHERE s.refreshToken = @refreshToken AND s.refreshTokenTs < @ts";
+        command.Parameters.AddWithValue("refreshToken", refreshToken);
+        command.Parameters.AddWithValue("ts", DateTime.Now);
+
+        indexNumber = (string)command.ExecuteScalar();
+        newRefreshToken = Guid.NewGuid();
+        if (indexNumber == null)
+        {
+          return BadRequest("Refresh token is not valid");
+        }
+
+        command.CommandText = "UPDATE student s SET refreshToken = @refreshToken, refreshTokenTs = @ts WHERE s.indexNumber = @login";
+        command.Parameters.AddWithValue("login", indexNumber);
+        command.Parameters.AddWithValue("refreshToken", newRefreshToken);
+        command.Parameters.AddWithValue("ts", DateTime.Now.AddDays(1));
+        command.ExecuteNonQuery();
+
+        client.Close();
+
+        var claims = new[]{
+          new Claim(ClaimTypes.NameIdentifier, indexNumber),
+          new Claim(ClaimTypes.Role, "student")
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWTSecret"]));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+          issuer: "APBD",
+          audience: "Students",
+          claims: claims,
+          expires: DateTime.Now.AddMinutes(30),
+          signingCredentials: credentials
+        );
+
+        return Ok(new
+        {
+          accessToken = new JwtSecurityTokenHandler().WriteToken(token),
+          refreshToken = newRefreshToken
+        });
+      }
     }
   }
 }
