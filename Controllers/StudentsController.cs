@@ -10,12 +10,12 @@ using pjatk_apbd.Models;
 namespace pjatk_apbd.Controllers
 {
   [ApiController]
-  [Route("api/student")]
-  public class StudentController : ControllerBase
+  [Route("api/students")]
+  public class StudentsController : ControllerBase
   {
     private readonly cw10Context _context;
 
-    public StudentController(cw10Context context)
+    public StudentsController(cw10Context context)
     {
       _context = context;
     }
